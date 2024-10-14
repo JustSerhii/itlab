@@ -1,3 +1,6 @@
+import pickle
+
+
 class dbManager:
     def __init__(self):
         self.db = None
@@ -8,6 +11,10 @@ class dbManager:
         return True
 
     def add_table(self, table_name):
+        if not table_name:
+            return False
+        if any(table.tName == table_name for table in self.tables):
+            return False
         new_table = Table(table_name)
         self.tables.append(new_table)
         return True
@@ -77,14 +84,22 @@ class dbManager:
         return False
 
     def save_db(self, path):
-        # Here you should implement the logic to save the database to a file
-        # For now, we'll just return True
-        return True
+        try:
+            with open(path, 'wb') as file:
+                pickle.dump((self.db, self.tables), file)
+            return True
+        except Exception as e:
+            print(f"Error saving database: {e}")
+            return False
 
     def open_db(self, path):
-        # Here you should implement the logic to open a database from a file
-        # For now, we'll just return True
-        return True
+        try:
+            with open(path, 'rb') as file:
+                self.db, self.tables = pickle.load(file)
+            return True
+        except Exception as e:
+            print(f"Error opening database: {e}")
+            return False
 
 class Database:
     def __init__(self, name):
