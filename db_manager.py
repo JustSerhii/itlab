@@ -69,10 +69,15 @@ class dbManager:
                     raise ValueError("Invalid color format. Use #RRGGBB")
                 return value
             elif column_type == DataType.COLOR_INVL:
-                if not (isinstance(value, (tuple, list)) and len(value) == 2):
-                    raise ValueError("ColorInvl type must be a tuple or list of two color values")
-                return (self.validate_value(value[0], DataType.COLOR),
-                        self.validate_value(value[1], DataType.COLOR))
+                # Expecting a string format: '#RRGGBB,#RRGGBB'
+                if not isinstance(value, str) or ',' not in value:
+                    raise ValueError("ColorInvl must be a string in the format '#RRGGBB,#RRGGBB'")
+
+                color1, color2 = value.split(',')
+                # Validate both colors
+                color1 = self.validate_value(color1.strip(), DataType.COLOR)
+                color2 = self.validate_value(color2.strip(), DataType.COLOR)
+                return (color1, color2)  # Return as a tuple of two colors
             else:
                 raise ValueError(f"Unknown data type: {column_type}")
         except ValueError as e:
@@ -81,6 +86,18 @@ class dbManager:
     def add_row(self, table_index, row_values):
         table = self.get_table(table_index)
         if table:
+            # Find the "ID" column by name (case-insensitive)
+            id_column_index = next((i for i, col in enumerate(table.tColumnsList) if col.cName.lower() == 'id'), None)
+
+            if id_column_index is not None:
+                new_id = row_values[id_column_index]
+
+                # Check if the new "ID" value already exists in the table
+                for row in table.tRowsList:
+                    if row.rValuesList[id_column_index] == new_id:
+                        return False, f"Error: Duplicate ID value '{new_id}' already exists. Please choose a unique ID."
+
+            # Validate and add the new row if all values are correct
             if len(row_values) == len(table.tColumnsList):
                 validated_values = []
                 for value, column in zip(row_values, table.tColumnsList):
