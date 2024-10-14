@@ -105,9 +105,7 @@ def api_save_db():
         filename += '.db'
 
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    # Save the database here (dbManager.save_db logic should be called)
 
-    # Placeholder for save logic
     if db_manager.save_db(file_path):  # Переконайтеся, що save_db() працює як потрібно
         return jsonify(success=True, message="Database saved successfully", file_path=filename)
 
@@ -137,6 +135,33 @@ def api_join_tables():
     if success:
         return jsonify(success=True, message=message, joined_data=joined_data)
     return jsonify(success=False, message=message), 400
+
+# Оновлення клітинки
+@app.route('/api/tables/<int:table_index>/rows/<int:row_index>/cell', methods=['PUT'])
+def api_update_cell(table_index, row_index):
+    data = request.json
+    new_value = data['new_value']  # Нове значення клітинки
+    col_index = data['col_index']  # Індекс колонки
+
+    # Отримуємо таблицю
+    table = db_manager.get_table(table_index)
+    if not table:
+        return jsonify(success=False, message="Table not found"), 404
+
+    # Отримуємо рядок
+    if 0 <= row_index < len(table.tRowsList):
+        row = table.tRowsList[row_index]
+
+        # Оновлюємо лише клітинку в колонці col_index
+        if col_index is not None and 0 <= col_index < len(row.rValuesList):
+            row.rValuesList[col_index] = new_value  # Оновлюємо значення
+
+            return jsonify(success=True, message="Cell updated successfully")
+        else:
+            return jsonify(success=False, message="Invalid column index"), 400
+    else:
+        return jsonify(success=False, message="Invalid row index"), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
