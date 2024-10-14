@@ -86,17 +86,6 @@ class dbManager:
     def add_row(self, table_index, row_values):
         table = self.get_table(table_index)
         if table:
-            # Find the "ID" column by name (case-insensitive)
-            id_column_index = next((i for i, col in enumerate(table.tColumnsList) if col.cName.lower() == 'id'), None)
-
-            if id_column_index is not None:
-                new_id = row_values[id_column_index]
-
-                # Check if the new "ID" value already exists in the table
-                for row in table.tRowsList:
-                    if row.rValuesList[id_column_index] == new_id:
-                        return False, f"Error: Duplicate ID value '{new_id}' already exists. Please choose a unique ID."
-
             # Validate and add the new row if all values are correct
             if len(row_values) == len(table.tColumnsList):
                 validated_values = []
