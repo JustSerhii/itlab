@@ -81,12 +81,24 @@ document.addEventListener('DOMContentLoaded', (event) => {
     async function updateTableList() {
         const response = await fetch('/api/tables');
         const data = await response.json();
+
+        // Виводимо всі отримані таблиці, щоб побачити структуру
+        console.log('Received tables data:', data.tables);
+
         tableList.innerHTML = '';
-        data.tables.forEach((table, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="/table/${index}">${table}</a>`;
-            tableList.appendChild(li);
-        });
+
+        data.tables.forEach((tableObj, index) => {
+        // Перевіряємо, чи існує поле name
+        console.log('Table object:', tableObj);
+
+        const tableName = tableObj.name || "Unknown Name";  // Використовуємо поле 'name' замість 'tName'
+
+        // Якщо структура правильна, створюємо елемент списку
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="/table/${index}">${tableName}</a>`;
+        tableList.appendChild(li);
+    });
+
     }
 
     updateTableList();
