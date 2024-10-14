@@ -85,6 +85,8 @@ class DBApp:
         ttk.Button(row_frame, text="Delete Row", command=self.delete_row).grid(row=0, column=1, padx=5, pady=5)
         ttk.Button(row_frame, text="Save Changes", command=self.save_changes).grid(row=0, column=2, padx=5, pady=5)
 
+        ttk.Button(self.data_frame, text="Join Tables", command=self.join_tables).grid(row=4, column=0, padx=5, pady=5)
+
     def create_db(self):
         db_name = self.db_name_entry.get()
         if self.db_manager.create_db(db_name):
@@ -125,6 +127,89 @@ class DBApp:
         else:
             messagebox.showerror("Error", "No table selected")
 
+    def add_row(self):
+        if self.current_table_index is not None:
+            table = self.db_manager.get_table(self.current_table_index)
+            if not table.tColumnsList:
+                messagebox.showerror("Error", "Table has no columns. Add columns before adding rows.")
+                return
+            new_row_values = []
+            for col in table.tColumnsList:
+                if col.typeName == "ColorInvl":
+                    # Only ask for one color, assuming it is an RGB code in the format "#RRGGBB"
+                    value = simpledialog.askstring("Add Row", f"Enter color value for {col.cName} ({col.typeName}):")
+                    if value is None or not self.is_valid_color(value):  # Check for valid color input
+                        return
+                    new_row_values.append(value)
+                else:
+                    value = simpledialog.askstring("Add Row", f"Enter value for {col.cName} ({col.typeName}):")
+                    if value is None:  # User canceled
+                        return
+                    new_row_values.append(value)
+            success, message = self.db_manager.add_row(self.current_table_index, new_row_values)
+            if success:
+                self.update_data_display()
+            else:
+                messagebox.showerror("Error", message)
+
+    def is_valid_color(self, value):
+        # Check if the value matches the format of a hex color code
+        return isinstance(value, str) and len(value) == 7 and value.startswith('#')
+
+    def join_tables(self):
+        if len(self.db_manager.tables) < 2:
+            messagebox.showerror("Error", "Need at least two tables to join")
+            return
+
+        table1_index = simpledialog.askinteger("Join Tables", "Enter index of first table:", minvalue=0,
+                                               maxvalue=len(self.db_manager.tables) - 1)
+        table2_index = simpledialog.askinteger("Join Tables", "Enter index of second table:", minvalue=0,
+                                               maxvalue=len(self.db_manager.tables) - 1)
+
+        if table1_index is None or table2_index is None:
+            return
+
+        table1 = self.db_manager.get_table(table1_index)
+        table2 = self.db_manager.get_table(table2_index)
+
+        column1_name = simpledialog.askstring("Join Tables", f"Enter column name from {table1.tName}:")
+        column2_name = simpledialog.askstring("Join Tables", f"Enter column name from {table2.tName}:")
+
+        if column1_name and column2_name:
+            success, message, joined_data = self.db_manager.join_tables(table1_index, table2_index, column1_name,
+                                                                        column2_name)
+            if success:
+                self.display_joined_data(joined_data)
+            else:
+                messagebox.showerror("Error", message)
+
+    def display_joined_data(self, joined_data):
+        # Створюємо нове вікно для відображення об'єднаних даних
+        joined_window = tk.Toplevel(self.root)
+        joined_window.title("Joined Table Data")
+
+        # Створюємо TreeView для відображення даних
+        tree = ttk.Treeview(joined_window)
+        tree["columns"] = joined_data[0]
+        tree["show"] = "headings"
+
+        # Налаштовуємо заголовки стовпців
+        for column in joined_data[0]:
+            tree.heading(column, text=column)
+            tree.column(column, width=100)
+
+        # Додаємо дані
+        for row in joined_data[1:]:
+            tree.insert("", "end", values=row)
+
+        # Додаємо прокрутку
+        scrollbar = ttk.Scrollbar(joined_window, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+
+        # Розміщуємо віджети
+        tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
     def delete_column(self):
         if self.current_table_index is not None:
             column_name = simpledialog.askstring("Delete Column", "Enter column name to delete:")
@@ -137,25 +222,6 @@ class DBApp:
                         messagebox.showinfo("Success", f"Column '{column_name}' deleted successfully")
                         return
                 messagebox.showerror("Error", f"Column '{column_name}' not found")
-        else:
-            messagebox.showerror("Error", "No table selected")
-
-    def add_row(self):
-        if self.current_table_index is not None:
-            table = self.db_manager.get_table(self.current_table_index)
-            if not table.tColumnsList:
-                messagebox.showerror("Error", "Table has no columns. Add columns before adding rows.")
-                return
-            new_row_values = []
-            for col in table.tColumnsList:
-                value = simpledialog.askstring("Add Row", f"Enter value for {col.cName} ({col.typeName}):")
-                if value is None:  # User canceled
-                    return
-                new_row_values.append(value)
-            if self.db_manager.add_row(self.current_table_index, new_row_values):
-                self.update_data_display()
-            else:
-                messagebox.showerror("Error", "Failed to add row")
         else:
             messagebox.showerror("Error", "No table selected")
 

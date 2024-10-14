@@ -1,4 +1,14 @@
 import pickle
+from typing import List, Any, Tuple
+
+
+class DataType:
+    INTEGER = "Integer"
+    REAL = "Real"
+    CHAR = "Char"
+    STRING = "String"
+    COLOR = "Color"
+    COLOR_INVL = "ColorInvl"  # Only keeping ColorInvl
 
 
 class dbManager:
@@ -40,8 +50,81 @@ class dbManager:
         if table:
             new_column = Column(column_name, column_type)
             table.tColumnsList.append(new_column)
+            # Додаємо None до всіх існуючих рядків для нового стовпця
+            for row in table.tRowsList:
+                row.rValuesList.append(None)
             return True
         return False
+
+    def validate_value(self, value, column_type):
+        try:
+            if column_type == DataType.INTEGER:
+                return int(value)
+            elif column_type == DataType.REAL:
+                return float(value)
+            elif column_type == DataType.CHAR:
+                return str(value)[0] if value else ''
+            elif column_type == DataType.STRING:
+                return str(value)
+            elif column_type == DataType.COLOR:
+                # Перевірка формату RGB
+                if not (isinstance(value, str) and len(value) == 7 and value.startswith('#')):
+                    raise ValueError("Invalid color format. Use #RRGGBB")
+                return value
+            elif column_type.endswith('Invl'):
+                # Для інтервальних типів очікуємо кортеж або список з двох значень
+                if not (isinstance(value, (tuple, list)) and len(value) == 2):
+                    raise ValueError("Interval type must be a tuple or list of two values")
+                base_type = column_type[:-4]  # Видаляємо 'Invl' з кінця
+                return (self.validate_value(value[0], base_type),
+                        self.validate_value(value[1], base_type))
+            else:
+                raise ValueError(f"Unknown data type: {column_type}")
+        except ValueError as e:
+            raise ValueError(f"Invalid value for {column_type}: {e}")
+
+    def add_row(self, table_index, row_values):
+        table = self.get_table(table_index)
+        if table:
+            if len(row_values) == len(table.tColumnsList):
+                validated_values = []
+                for value, column in zip(row_values, table.tColumnsList):
+                    try:
+                        validated_value = self.validate_value(value, column.typeName)
+                        validated_values.append(validated_value)
+                    except ValueError as e:
+                        return False, str(e)
+                new_row = Row(validated_values)
+                table.tRowsList.append(new_row)
+                return True, "Row added successfully"
+        return False, "Failed to add row"
+
+    def join_tables(self, table1_index: int, table2_index: int, column1_name: str, column2_name: str) -> Tuple[
+        bool, str, List[List[Any]]]:
+        table1 = self.get_table(table1_index)
+        table2 = self.get_table(table2_index)
+
+        if not table1 or not table2:
+            return False, "One or both tables do not exist", []
+
+        column1_index = next((i for i, col in enumerate(table1.tColumnsList) if col.cName == column1_name), None)
+        column2_index = next((i for i, col in enumerate(table2.tColumnsList) if col.cName == column2_name), None)
+
+        if column1_index is None or column2_index is None:
+            return False, "Specified columns not found in tables", []
+
+        joined_data = []
+        header = [f"{table1.tName}.{col.cName}" for col in table1.tColumnsList] + \
+                 [f"{table2.tName}.{col.cName}" for col in table2.tColumnsList if col.cName != column2_name]
+        joined_data.append(header)
+
+        for row1 in table1.tRowsList:
+            for row2 in table2.tRowsList:
+                if row1.rValuesList[column1_index] == row2.rValuesList[column2_index]:
+                    joined_row = row1.rValuesList + [v for i, v in enumerate(row2.rValuesList) if i != column2_index]
+                    joined_data.append(joined_row)
+
+        return True, "Tables joined successfully", joined_data
 
     def delete_column(self, table_index, column_index):
         table = self.get_table(table_index)
@@ -52,14 +135,6 @@ class dbManager:
             return True
         return False
 
-    def add_row(self, table_index, row_values):
-        table = self.get_table(table_index)
-        if table:
-            if len(row_values) == len(table.tColumnsList):
-                new_row = Row(row_values)
-                table.tRowsList.append(new_row)
-                return True
-        return False
 
     def delete_row(self, table_index, row_index):
         table = self.get_table(table_index)
