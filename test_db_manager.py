@@ -1,86 +1,129 @@
 import unittest
-from db_manager import dbManager
+from db_manager import dbManager, DataType
 
 class TestDBManager(unittest.TestCase):
+
     def setUp(self):
-        self.manager = dbManager()
-        self.manager.create_db("TestDB")
-        self.manager.add_table("TestTable")
+        # Створюємо об'єкт dbManager перед кожним тестом
+        self.db = dbManager()
+        self.db.create_db('TestDB')
 
     def test_create_db(self):
-        # Тест створення бази даних
-        self.assertTrue(self.manager.create_db("NewTestDB"))
-        self.assertEqual(self.manager.db.dbName, "NewTestDB")
+        self.assertEqual(self.db.db.name, 'TestDB')
+        self.assertEqual(len(self.db.tables), 0)
 
     def test_add_table(self):
-        # Тест додавання таблиці
-        self.assertTrue(self.manager.add_table("AnotherTable"))
-        self.assertEqual(len(self.manager.db.dbTablesList), 2)
-        self.assertEqual(self.manager.db.dbTablesList[1].tName, "AnotherTable")
+        self.assertTrue(self.db.add_table('Employees'))
+        self.assertEqual(len(self.db.tables), 1)
+        self.assertEqual(self.db.tables[0].tName, 'Employees')
 
-    def test_add_column(self):
-        # Тест додавання колонки
-        self.assertTrue(self.manager.add_column(0, "TestColumn", "Integer"))
-        self.assertEqual(len(self.manager.db.dbTablesList[0].tColumnsList), 1)
-        self.assertEqual(self.manager.db.dbTablesList[0].tColumnsList[0].cName, "TestColumn")
-
-    def test_add_row(self):
-        # Тест додавання рядка
-        self.manager.add_column(0, "TestColumn", "Integer")
-        self.assertTrue(self.manager.add_row(0))
-        self.assertEqual(len(self.manager.db.dbTablesList[0].tRowsList), 1)
-
-    def test_change_value(self):
-        # Тест зміни значення
-        self.manager.add_column(0, "TestColumn", "Integer")
-        self.manager.add_row(0)
-        self.assertTrue(self.manager.change_value("123", 0, 0, 0))
-        self.assertEqual(self.manager.db.dbTablesList[0].tRowsList[0].rValuesList[0], "123")
-
-    def test_custom_column_validation(self):
-        # Тест валідації для ColorInvl
-        self.manager.add_column(0, "Interval", "ColorInvl")
-        self.manager.add_row(0)
-        self.assertTrue(self.manager.change_value("5 10", 0, 0, 0))  # Valid interval
-        self.assertFalse(self.manager.change_value("10 5", 0, 0, 0))  # Invalid interval
-
-    def test_delete_row(self):
-        # Тест видалення рядка
-        self.manager.add_column(0, "TestColumn", "Integer")
-        self.manager.add_row(0)
-        self.manager.add_row(0)
-        self.manager.delete_row(0, 1)
-        self.assertEqual(len(self.manager.db.dbTablesList[0].tRowsList), 1)
-
-    def test_delete_column(self):
-        # Тест видалення колонки
-        self.manager.add_column(0, "TestColumn1", "Integer")
-        self.manager.add_column(0, "TestColumn2", "Real")
-        self.manager.add_row(0)
-        self.manager.delete_column(0, 1)
-        self.assertEqual(len(self.manager.db.dbTablesList[0].tColumnsList), 1)
-        self.assertEqual(self.manager.db.dbTablesList[0].tColumnsList[0].cName, "TestColumn1")
+    def test_add_duplicate_table(self):
+        self.db.add_table('Employees')
+        self.assertFalse(self.db.add_table('Employees'))
 
     def test_delete_table(self):
-        # Тест видалення таблиці
-        self.manager.add_table("AnotherTable")
-        self.manager.delete_table(1)
-        self.assertEqual(len(self.manager.db.dbTablesList), 1)
+        self.db.add_table('Employees')
+        self.assertTrue(self.db.delete_table(0))
+        self.assertEqual(len(self.db.tables), 0)
 
-    def test_save_and_open_db(self):
-        # Тест збереження та відкриття бази даних
-        self.manager.add_column(0, "TestColumn", "Integer")
-        self.manager.add_row(0)
-        self.manager.change_value("456", 0, 0, 0)
+    def test_delete_invalid_table(self):
+        self.assertFalse(self.db.delete_table(0))
 
-        self.manager.save_db("test_db.txt")
+    def test_add_column(self):
+        self.db.add_table('Employees')
+        self.assertTrue(self.db.add_column(0, 'Name', DataType.STRING))
+        self.assertEqual(len(self.db.tables[0].tColumnsList), 1)
+        self.assertEqual(self.db.tables[0].tColumnsList[0].cName, 'Name')
 
-        new_manager = dbManager()
-        new_manager.open_db("test_db.txt")
-        self.assertEqual(new_manager.db.dbName, "TestDB")
-        self.assertEqual(len(new_manager.db.dbTablesList), 1)
-        self.assertEqual(len(new_manager.db.dbTablesList[0].tRowsList), 1)
-        self.assertEqual(new_manager.db.dbTablesList[0].tRowsList[0].rValuesList[0], "456")
+    def test_add_multiple_columns(self):
+        self.db.add_table('Employees')
+        self.assertTrue(self.db.add_column(0, 'Name', DataType.STRING))
+        self.assertTrue(self.db.add_column(0, 'Age', DataType.INTEGER))
+        self.assertEqual(len(self.db.tables[0].tColumnsList), 2)
 
-if __name__ == "__main__":
+    def test_add_row(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'Name', DataType.STRING)
+        success, message = self.db.add_row(0, ['Alice'])
+        self.assertTrue(success)
+        self.assertEqual(len(self.db.tables[0].tRowsList), 1)
+        self.assertEqual(self.db.tables[0].tRowsList[0].rValuesList[0], 'Alice')
+
+    def test_add_invalid_row(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'Name', DataType.STRING)
+        self.db.add_column(0, 'Age', DataType.INTEGER)
+        success, message = self.db.add_row(0, ['Alice', 'invalid_age'])
+        self.assertFalse(success)
+        self.assertIn('Invalid value for Integer', message)
+
+    def test_update_row(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'Name', DataType.STRING)
+        self.db.add_row(0, ['Alice'])
+        self.assertTrue(self.db.update_row(0, 0, ['Bob']))
+        self.assertEqual(self.db.tables[0].tRowsList[0].rValuesList[0], 'Bob')
+
+    def test_update_invalid_row(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'Name', DataType.STRING)
+        self.db.add_row(0, ['Alice'])
+        self.assertFalse(self.db.update_row(0, 1, ['Bob']))  # Рядок не існує
+
+    def test_delete_row(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'Name', DataType.STRING)
+        self.db.add_row(0, ['Alice'])
+        self.assertTrue(self.db.delete_row(0, 0))
+        self.assertEqual(len(self.db.tables[0].tRowsList), 0)
+
+    def test_delete_invalid_row(self):
+        self.db.add_table('Employees')
+        self.assertFalse(self.db.delete_row(0, 0))
+
+    def test_add_color_column(self):
+        self.db.add_table('Employees')
+        self.assertTrue(self.db.add_column(0, 'FavoriteColor', DataType.COLOR))
+        self.assertEqual(self.db.tables[0].tColumnsList[0].cName, 'FavoriteColor')
+
+    def test_add_color_value(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'FavoriteColor', DataType.COLOR)
+        success, message = self.db.add_row(0, ['#FF5733'])
+        self.assertTrue(success)
+        self.assertEqual(self.db.tables[0].tRowsList[0].rValuesList[0], '#FF5733')
+
+    def test_add_invalid_color_value(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'FavoriteColor', DataType.COLOR)
+        success, message = self.db.add_row(0, ['invalid_color'])
+        self.assertFalse(success)
+        self.assertIn('Invalid color format', message)
+
+    def test_join_tables(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'ID', DataType.INTEGER)
+        self.db.add_row(0, [1])
+
+        self.db.add_table('Salaries')
+        self.db.add_column(1, 'ID', DataType.INTEGER)
+        self.db.add_column(1, 'Salary', DataType.INTEGER)
+        self.db.add_row(1, [1, 5000])
+
+        success, message, joined_data = self.db.join_tables(0, 1, 'ID', 'ID')
+        self.assertTrue(success)
+        self.assertEqual(joined_data[1], [1, 5000])  # Об'єднання без дублювання колонки ID
+
+    def test_join_tables_invalid_columns(self):
+        self.db.add_table('Employees')
+        self.db.add_column(0, 'ID', DataType.INTEGER)
+        self.db.add_row(0, [1])
+        self.db.add_table('Salaries')
+        self.db.add_column(1, 'ID', DataType.INTEGER)
+        success, message, joined_data = self.db.join_tables(0, 1, 'invalid_column', 'ID')
+        self.assertFalse(success)
+        self.assertIn('Specified columns not found', message)
+
+
+if __name__ == '__main__':
     unittest.main()
