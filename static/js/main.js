@@ -34,18 +34,29 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     saveDbButton.addEventListener('click', async () => {
-        const filePath = prompt("Enter file name to save the database:");
+        const filePath = prompt("Enter file name to save the database (without extension):");
+
         if (filePath) {
             const response = await fetch('/api/save_db', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({file_path: filePath})
+                body: JSON.stringify({ file_path: filePath })  // Відправляємо ім'я файлу без розширення
             });
+
             const result = await response.json();
-            alert(result.message);
+            if (result.success) {
+                // Створюємо посилання для збереження файлу
+                const a = document.createElement('a');
+                a.href = `/uploads/${result.file_path}`;  // URL для завантаження файлу з .db
+                a.download = result.file_path;
+                document.body.appendChild(a);
+                a.click();  // відкриваємо діалогове вікно для збереження
+                document.body.removeChild(a);
+            } else {
+                alert(result.message);
+            }
         }
     });
-
     openDbButton.addEventListener('click', () => {
         fileInput.click();
     });

@@ -38,33 +38,43 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
    dataTable.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('edit-row')) {
-        const rowIndex = e.target.dataset.rowIndex;
-        const row = e.target.closest('tr');
-        const cells = row.querySelectorAll('td'); // отримати всі клітинки рядка
-        const newValues = [];
+    const target = e.target;
 
-        cells.forEach((cell, index) => {
-            if (index < cells.length - 1) { // не враховувати клітинку з кнопками "Edit" і "Delete"
-                const currentValue = cell.querySelector('.cell-data') ? cell.querySelector('.cell-data').textContent : cell.textContent;
-                const newValue = prompt(`Enter new value for ${currentValue}:`, currentValue);
-                newValues.push(newValue !== null ? newValue : currentValue);
+    // Якщо це клітинка (і не кнопка)
+    if (target.tagName === 'TD' && !target.closest('button')) {
+        const rowIndex = target.closest('tr').querySelector('.edit-row').dataset.rowIndex; // отримуємо індекс рядка
+        const cellIndex = Array.from(target.parentNode.children).indexOf(target); // індекс клітинки
+
+        if (!target.isContentEditable) {
+            target.setAttribute('contenteditable', 'true');
+            target.focus();
+        }
+
+        target.addEventListener('blur', async () => {
+            target.setAttribute('contenteditable', 'false'); // закінчуємо редагування після втрати фокусу
+
+            // Отримуємо всі значення з рядка
+            const cells = Array.from(target.closest('tr').querySelectorAll('td:not(:last-child)')); // всі, крім останньої клітинки з кнопками
+            const newValues = cells.map(cell => cell.textContent.trim());
+
+            // Відправляємо оновлені значення на сервер
+            const response = await fetch(`/api/tables/${tableIndex}/rows/${rowIndex}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ row_values: newValues })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Row updated successfully');
+            } else {
+                alert(result.message);
             }
         });
-
-        const response = await fetch(`/api/tables/${tableIndex}/rows/${rowIndex}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ row_values: newValues })
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            location.reload();
-        }
-        alert(result.message);
     }
 });
+
+
 
     deleteTableBtn.addEventListener('click', async () => {
         if (confirm('Are you sure you want to delete this table?')) {

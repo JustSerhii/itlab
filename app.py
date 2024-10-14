@@ -11,6 +11,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+
 # Web routes
 @app.route('/')
 def index():
@@ -97,9 +98,19 @@ def api_row_operations(table_index, row_index):
 @app.route('/api/save_db', methods=['POST'])
 def api_save_db():
     data = request.json
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(data['file_path']))
-    if db_manager.save_db(file_path):
-        return jsonify(success=True, message="Database saved successfully")
+    filename = secure_filename(data['file_path'])
+
+    # Додаємо розширення .db, якщо користувач його не вказав
+    if not filename.endswith('.db'):
+        filename += '.db'
+
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    # Save the database here (dbManager.save_db logic should be called)
+
+    # Placeholder for save logic
+    if db_manager.save_db(file_path):  # Переконайтеся, що save_db() працює як потрібно
+        return jsonify(success=True, message="Database saved successfully", file_path=filename)
+
     return jsonify(success=False, message="Failed to save database"), 400
 
 @app.route('/api/open_db', methods=['POST'])
