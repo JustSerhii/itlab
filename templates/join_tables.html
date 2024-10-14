@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Tables - Database Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Join Tables</h1>
+    <form id="join-tables-form">
+        <select name="table1_index" required>
+            <option value="">Select first table</option>
+            {% for table in tables %}
+                <option value="{{ loop.index0 }}">{{ table }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" name="column1_name" placeholder="Column name from first table" required>
+        <select name="table2_index" required>
+            <option value="">Select second table</option>
+            {% for table in tables %}
+                <option value="{{ loop.index0 }}">{{ table }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" name="column2_name" placeholder="Column name from second table" required>
+        <button type="submit">Join Tables</button>
+    </form>
+    <div id="join-result"></div>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+    <script src="{{ url_for('static', filename='js/join_tables.js') }}"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
+# db_manager.py
 import pickle
 from typing import List, Any, Tuple
-
 
 class DataType:
     INTEGER = "Integer"
@@ -8,8 +8,7 @@ class DataType:
     CHAR = "Char"
     STRING = "String"
     COLOR = "Color"
-    COLOR_INVL = "ColorInvl"  # Only keeping ColorInvl
-
+    COLOR_INVL = "ColorInvl"
 
 class dbManager:
     def __init__(self):
@@ -50,7 +49,6 @@ class dbManager:
         if table:
             new_column = Column(column_name, column_type)
             table.tColumnsList.append(new_column)
-            # Додаємо None до всіх існуючих рядків для нового стовпця
             for row in table.tRowsList:
                 row.rValuesList.append(None)
             return True
@@ -67,17 +65,14 @@ class dbManager:
             elif column_type == DataType.STRING:
                 return str(value)
             elif column_type == DataType.COLOR:
-                # Перевірка формату RGB
                 if not (isinstance(value, str) and len(value) == 7 and value.startswith('#')):
                     raise ValueError("Invalid color format. Use #RRGGBB")
                 return value
-            elif column_type.endswith('Invl'):
-                # Для інтервальних типів очікуємо кортеж або список з двох значень
+            elif column_type == DataType.COLOR_INVL:
                 if not (isinstance(value, (tuple, list)) and len(value) == 2):
-                    raise ValueError("Interval type must be a tuple or list of two values")
-                base_type = column_type[:-4]  # Видаляємо 'Invl' з кінця
-                return (self.validate_value(value[0], base_type),
-                        self.validate_value(value[1], base_type))
+                    raise ValueError("ColorInvl type must be a tuple or list of two color values")
+                return (self.validate_value(value[0], DataType.COLOR),
+                        self.validate_value(value[1], DataType.COLOR))
             else:
                 raise ValueError(f"Unknown data type: {column_type}")
         except ValueError as e:
@@ -99,8 +94,7 @@ class dbManager:
                 return True, "Row added successfully"
         return False, "Failed to add row"
 
-    def join_tables(self, table1_index: int, table2_index: int, column1_name: str, column2_name: str) -> Tuple[
-        bool, str, List[List[Any]]]:
+    def join_tables(self, table1_index: int, table2_index: int, column1_name: str, column2_name: str) -> Tuple[bool, str, List[List[Any]]]:
         table1 = self.get_table(table1_index)
         table2 = self.get_table(table2_index)
 
@@ -135,7 +129,6 @@ class dbManager:
             return True
         return False
 
-
     def delete_row(self, table_index, row_index):
         table = self.get_table(table_index)
         if table and 0 <= row_index < len(table.tRowsList):
@@ -147,15 +140,15 @@ class dbManager:
         table = self.get_table(table_index)
         if table and 0 <= row_index < len(table.tRowsList):
             if len(new_values) == len(table.tColumnsList):
-                table.tRowsList[row_index].rValuesList = new_values
+                validated_values = []
+                for value, column in zip(new_values, table.tColumnsList):
+                    try:
+                        validated_value = self.validate_value(value, column.typeName)
+                        validated_values.append(validated_value)
+                    except ValueError as e:
+                        return False
+                table.tRowsList[row_index].rValuesList = validated_values
                 return True
-        return False
-
-    def change_value(self, new_value, table_index, column_index, row_index):
-        table = self.get_table(table_index)
-        if table and 0 <= column_index < len(table.tColumnsList) and 0 <= row_index < len(table.tRowsList):
-            table.tRowsList[row_index].rValuesList[column_index] = new_value
-            return True
         return False
 
     def save_db(self, path):

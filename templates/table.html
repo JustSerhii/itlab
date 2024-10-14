@@ -1,0 +1,75 @@
+<!-- table.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ table.tName }} - Database Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>{{ table.tName }}</h1>
+
+    <h2>Add Column</h2>
+    <form id="add-column-form">
+        <input type="hidden" name="table_index" value="{{ table_index }}">
+        <input type="text" name="column_name" placeholder="Column Name" required>
+        <select name="column_type">
+            <option value="Integer">Integer</option>
+            <option value="Real">Real</option>
+            <option value="Char">Char</option>
+            <option value="String">String</option>
+            <option value="Color">Color</option>
+            <option value="ColorInvl">ColorInvl</option>
+        </select>
+        <button type="submit">Add Column</button>
+    </form>
+
+    <h2>Rows in Table</h2>
+    <table id="data-table">
+        <thead>
+            <tr>
+                {% for column in table.tColumnsList %}
+                    <th>{{ column.cName }} ({{ column.typeName }})</th>
+                {% endfor %}
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table.tRowsList %}
+                <tr>
+                    {% for value in row.rValuesList %}
+                        <td>
+                            {% if table.tColumnsList[loop.index0].typeName == 'Color' %}
+                                <input type="color" value="{{ value }}" disabled>
+                            {% elif table.tColumnsList[loop.index0].typeName == 'ColorInvl' %}
+                                <input type="color" value="{{ value[0] }}" disabled>
+                                <input type="color" value="{{ value[1] }}" disabled>
+                            {% else %}
+                                <span class="cell-data">{{ value }}</span>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td>
+                        <button class="edit-row" data-row-index="{{ loop.index0 }}">Edit</button>
+                        <button class="delete-row" data-row-index="{{ loop.index0 }}">Delete</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Add Row</h2>
+    <form id="add-row-form">
+        <input type="hidden" name="table_index" value="{{ table_index }}">
+        {% for column in table.tColumnsList %}
+            <input type="text" name="row_values[]" placeholder="{{ column.cName }}" required>
+        {% endfor %}
+        <button type="submit">Add Row</button>
+    </form>
+
+    <button id="delete-table-btn">Delete Table</button>
+
+    <script src="{{ url_for('static', filename='js/table.js') }}"></script>
+</body>
+</html>

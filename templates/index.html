@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Database Manager</h1>
+
+    <!-- Create Database Form -->
+    <form id="create-db-form">
+        <input type="text" name="db_name" placeholder="Database Name" required>
+        <button type="submit">Create Database</button>
+    </form>
+
+    <!-- Add Table Form -->
+    <form id="add-table-form">
+        <input type="text" name="table_name" placeholder="Table Name" required>
+        <button type="submit">Add Table</button>
+    </form>
+
+    <!-- Save/Load Database Buttons -->
+    <button id="save-db-button">Save Database</button>
+    <button id="open-db-button">Open Database</button>
+
+    <!-- Join Tables Link -->
+    <a href="{{ url_for('join_tables') }}">Join Tables</a>
+
+    <h2>Tables</h2>
+    <ul id="table-list">
+        <!-- Tables will be loaded here -->
+    </ul>
+
+    <input type="file" id="file-input" style="display: none;">
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
